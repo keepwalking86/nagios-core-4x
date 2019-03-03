@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+
+$host = $ARGV[0];
+$port = $ARGV[1];
+$sid  = $ARGV[2];
+$user  = $ARGV[3];
+$pass  = $ARGV[4];
+
+sub trim($);
+my @result;
+my %ERRORS=('OK'=>0,'WARNING'=>1,'CRITICAL'=>2);
+my @param_array = (
+    [90,">","Dictionary Cache Hit Ratio",'SELECT (1 - (Sum(getmisses)/(Sum(gets) + Sum(getmisses)))) * 100 FROM v\$rowcache;'],
+    [99,">","Library Cache Hit Ratio",'SELECT (1 -(Sum(reloads)/(Sum(pins) + Sum(reloads)))) * 100  FROM   v\$librarycache;'],
+    [89,">","DB Block Buffer Cache Hit Ratio",'SELECT (1 - (phys.value / (db.value + cons.value))) * 100 FROM v\$sysstat phys,v\$sysstat db,v\$sysstat cons WHERE  phys.name  = \'physical reads\' AND db.name = \'db block gets\' AND cons.name  = \'consistent gets\';'],
+    [98,">","Latch Hit Ratio",'SELECT (1 - (Sum(misses) / Sum(gets))) * 100  FROM   v\$latch;'],
+    [5,"<","Disk Sort Ratio",'SELECT (disk.value/mem.value) * 100 FROM v\$sysstat disk,v\$sysstat mem WHERE  disk.name = \'sorts (disk)\' AND mem.name  = \'sorts (memory)\';'],
+    [5,"<","Rollback Segment Waits",'SELECT (Sum(waits) / Sum(gets)) * 100  FROM   v\$rollstat;'],
+    [50,"<","Dispatcher Workload",'SELECT NVL((Sum(busy) / (Sum(busy) + Sum(idle))) * 100,0) FROM v\$dispatcher;']
+               );
+# is possible define own selects [reference value,operator (<;>;eq;ne etc.),Description,select]			   
+my @results;
+
+sub array_rows {
+    my ($array_rows) = @_;
+
+    my $rows = @$array_rows;
+    return $rows;
+       }
+
+sub trim($)
+{
+        my $string = shift;
+        $string =~ s/^\s+//;
+        $string =~ s/\s+$//;
+        return $string;
+}
+
+
+sub logon {
+open (SQL,"sqlplus -s system/mismatch@\\(DESCRIPTION=\\(ADDRESS=\\(PROTOCOL=TCP\\)\\(Host=$host\\)\\(Port=$port\\)\\)\\(CONNECT_DATA=\\(SID=$sid\\)\\)\\)</dev/null
+|") or die;
+  while ( my $res = <SQL> )
+             {
+           if ($res =~ /^(ORA-\d{5})/) {return $1;}
+             }
+}
+
+if (logon() eq "ORA-01017"){
+
+
+
+ for (my $i=0; $i<array_rows(\@param_array); $i++){
+     # print "$param_array[$i][0] -- $param_array[$i][1] -- $param_array[$i][2] -- $param_array[$i][3]\n";
+
+open (SQL,"sqlplus -s $user/$pass@\\(DESCRIPTION=\\(ADDRESS=\\(PROTOCOL=TCP\\)\\(Host=$host\\)\\(Port=$port\\)\\)\\(CONNECT_DATA=\\(SID=$sid\\)\\)\\) << EOF
+set pagesize 0
+set numformat 999.999
+$param_array[$i][3]
+EOF |") or die;
+  while ( my $res = <SQL> )
+             {
+ #  print trim($res)."\n";
+   if ( $res =~/^\s*\S+/ ) { push(@results,trim($res));}
+             }
+  }
+
+
+  for ($i=0;$i<@results;$i++) {
+  #   print $i." hodnota je ".$result[$i]." a ma byt ".$param_array[$i][0];
+    eval "unless (".$results[$i].$param_array[$i][1].$param_array[$i][0].") { print\"".$param_array[$i][2]." ".$sid." KO \\n\"; exit ".$ERRORS{"WARNING"}.";}";
+
+  }
+print "status and health of $sid ORACLE is OK";
+exit $ERRORS{"OK"};
+
+} else {print "Unable to connect to $sid ORACLE !!! "; exit $ERRORS{"CRITICAL"};}

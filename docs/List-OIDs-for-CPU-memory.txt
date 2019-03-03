@@ -1,0 +1,60 @@
+#https://support.solarwinds.com/Success_Center/Network_Performance_Monitor_(NPM)/Knowledgebase_Articles/CPU_and_memory_utilization_Object_IDs_OIDs_NPM_can_poll?CMPSource=THW&CMP=REFDOM
+#ftp://ftp.cisco.com/pub/mibs/oid/CISCO-MEMORY-POOL-MIB.oid
+
+Detail
+By default,  NPM polls the following CPU and memory utilization OIDs, listed by device manufacturer.
+
+MANUFACTURER	OID NAME	OID VALUE
+Cisco	CiscoFreeMem		1.3.6.1.4.1.9.2.1.8.0
+Cisco	CiscoBufferSmMiss	1.3.6.1.4.1.9.2.1.19.0
+Cisco	CiscoBufferMdMiss	1.3.6.1.4.1.9.2.1.27.0
+Cisco	CiscoBufferBgMiss	1.3.6.1.4.1.9.2.1.35.0
+Cisco	CiscoBufferLgMiss	1.3.6.1.4.1.9.2.1.43.0
+Cisco	CiscoBufferNoMem	1.3.6.1.4.1.9.2.1.47.0
+Cisco	CiscoAvgBusy1		1.3.6.1.4.1.9.2.1.57.0
+Cisco	CiscoAvgBusy5		1.3.6.1.4.1.9.2.1.58.0
+Cisco	CiscoBufferHgMiss	1.3.6.1.4.1.9.2.1.67.0
+Cisco	CiscoProcessorRam	1.3.6.1.4.1.9.3.6.6.0
+Cisco	ciscoMemoryPoolUsed	1.3.6.1.4.1.9.9.48.1.1.1.5
+Cisco	CiscoMemoryPoolFree	1.3.6.1.4.1.9.9.48.1.1.1.6
+Cisco	cpmCPUTotal1min		1.3.6.1.4.1.9.9.109.1.1.1.1.4
+Cisco	cpmCPUTotal5min		1.3.6.1.4.1.9.9.109.1.1.1.1.5
+Cisco	cpmCPUTotal1minRev	1.3.6.1.4.1.9.9.109.1.1.1.1.7
+Cisco	cpmCPUTotal5MinRev	1.3.6.1.4.1.9.9.109.1.1.1.1.8
+ 	 	 
+Foundry	extremeCpuAggregateUtilization	1.3.6.1.4.1.1916.1.1.1.28.0
+Foundry	snAgGblCpuUtil1MinAvg		1.3.6.1.4.1.1991.1.1.2.1.52.0
+Foundry	snAgGblDynMemTotal		1.3.6.1.4.1.1991.1.1.2.1.54.0
+Foundry	snAgGblDynMemFree		1.3.6.1.4.1.1991.1.1.2.1.55.0
+ 	 	 
+Juniper	jnxOperatingCPURE0	1.3.6.1.4.1.2636.3.1.13.1.8.9.1.0.0
+Juniper	jnxOperatingCPURE1	1.3.6.1.4.1.2636.3.1.13.1.8.9.2.0.0
+Juniper	jnxOperatingBufferRE0	1.3.6.1.4.1.2636.3.1.13.1.11.9.2.0.0
+Juniper	jnxOperatingMemoryRE0	1.3.6.1.4.1.2636.3.1.13.1.15.9.1.0.0
+Juniper	jnxOperatingMemoryRE1	1.3.6.1.4.1.2636.3.1.13.1.15.9.2.0.0
+ 	 	 
+Net-SNMP	memTotalReal	1.3.6.1.4.1.2021.4.5
+Net-SNMP	memAvailReal	1.3.6.1.4.1.2021.4.6
+Net-SNMP	ssCPUIdle	1.3.6.1.4.1.2021.11.11.0
+
+NET-SNMP (NPM12 AND LATER REPLACES SSCPUIDLE) SSCPURAWIDLE	1.3.6.1.4.1.2021.11.53.0
+ 	 	 
+Rapid City	rcSysCpuUtil	1.3.6.1.4.1.2272.1.1.20.0
+Rapid City	rcSysDramSize	1.3.6.1.4.1.2272.1.1.46.0
+Rapid City	rcSysDramFree	1.3.6.1.4.1.2272.1.1.48.0
+ 	 	 
+RiverDelta Networks	rdnTotalAllocatableMem		1.3.6.1.4.1.4981.1.20.1.1.1.4
+RiverDelta Networks	rdnTotalMemAllocated		1.3.6.1.4.1.4981.1.20.1.1.1.5
+RiverDelta Networks	rdnTotalFreeMem			1.3.6.1.4.1.4981.1.20.1.1.1.6
+RiverDelta Networks	rdnTotalCPUUtilization1Min	1.3.6.1.4.1.4981.1.20.1.1.1.8
+RiverDelta Networks	rdnTotalCPUUtilization5Min	1.3.6.1.4.1.4981.1.20.1.1.1.9
+RiverDelta Networks	cadCpuRecentTime		1.3.6.1.4.1.4998.1.1.5.3.1.1.1.2
+RiverDelta Networks	cadIdleCpuRecentTime		1.3.6.1.4.1.4998.1.1.5.3.1.1.1.4
+RiverDelta Networks	cadMeHeapSize			1.3.6.1.4.1.4998.1.1.5.3.2.1.1.2
+RiverDelta Networks	cadMeHeapRemaining		1.3.6.1.4.1.4998.1.1.5.3.2.1.1.3
+ 	 	 
+Windows and Generics	hrMemorySize		1.3.6.1.2.1.25.2.2.0
+Windows and Generics	hrProcessorLoad		1.3.6.1.2.1.25.3.3.1.2
+Windows and Generics	hrSWRunPerfMem		1.3.6.1.2.1.25.5.1.1.2
+
+Windows and Generics	N.Memory.SNMP.HrStorage		1.3.6.1.2.1.25.2.3.1.2
