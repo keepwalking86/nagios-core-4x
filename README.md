@@ -22,10 +22,8 @@ Một số nội dung về Nagios-core-4x, gồm:
 
 - [Một số mẫu tệp cấu hình](./etc)
 
-- 
-
-
 <p align="center">
 <img src="./images/nagios-system.jpg" />
 </p>
 
+Updating ...
