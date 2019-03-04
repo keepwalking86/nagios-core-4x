@@ -85,7 +85,7 @@ define host {
 
 define service {
    name       srv-pnp
-   action_url /pnp4nagios/index.php/graph?host=\$HOSTNAME$&srv=$SERVICEDESC$' class='tips' rel='/pnp4nagios/index.php/popup?host=\$HOSTNAME$&srv=\$SERVICEDESC$
+   action_url /pnp4nagios/index.php/graph?host=\$HOSTNAME$&srv=\$SERVICEDESC$' class='tips' rel='/pnp4nagios/index.php/popup?host=\$HOSTNAME$&srv=\$SERVICEDESC$
    register   0
 }
 EOF
