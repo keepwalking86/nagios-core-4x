@@ -18,7 +18,7 @@ Một số nội dung về Nagios-core-4x, gồm:
 
 - [Generate performance graphs with PNP4Nagios](docs/8.pnp4nagios.md)
 
-- [Giám sát với một số plugins khác](9.monitoring-with-extended-plugins.md)
+- [Giám sát với một số plugins khác](docs/9.monitoring-with-extended-plugins.md)
 
 - [Một số mẫu tệp cấu hình](./etc)
 
