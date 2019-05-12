@@ -38,7 +38,7 @@ systemctl start npcd.service
 systemctl restart httpd.service
 
 #Remove Environment test file
-/usr/local/pnp4nagios/share/install.php
+rm -f /usr/local/pnp4nagios/share/install.php
 
 #Processing performance data
 sed -i '/process_performance_data/c\process_performance_data=1' /usr/local/nagios/etc/nagios.cfg
