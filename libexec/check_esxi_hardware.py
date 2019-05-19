@@ -24,7 +24,7 @@
 # Copyright (c) 2008 David Ligeret
 # Copyright (c) 2009 Joshua Daniel Franklin
 # Copyright (c) 2010 Branden Schneider
-# Copyright (c) 2010-2017 Claudio Kuenzler
+# Copyright (c) 2010-2019 Claudio Kuenzler
 # Copyright (c) 2010 Samir Ibradzic
 # Copyright (c) 2010 Aaron Rogers
 # Copyright (c) 2011 Ludovic Hutin
@@ -38,6 +38,7 @@
 # Copyright (c) 2015 Andreas Gottwald
 # Copyright (c) 2015 Stanislav German-Evtushenko
 # Copyright (c) 2015 Stefan Roos
+# Copyright (c) 2018 Peter Newman
 #
 # The VMware 4.1 CIM API is documented here:
 #   http://www.vmware.com/support/developer/cim-sdk/4.1/smash/cim_smash_410_prog.pdf
@@ -46,8 +47,8 @@
 # The VMware 5.x CIM API is documented here:
 #   http://pubs.vmware.com/vsphere-50/index.jsp?nav=/5_1_1
 #
-# This Nagios plugin is maintained here:
-#   http://www.claudiokuenzler.com/nagios-plugins/check_esxi_hardware.php
+# This monitoring plugin is maintained and documented here:
+#   https://www.claudiokuenzler.com/monitoring-plugins/check_esxi_hardware.php
 #
 #@---------------------------------------------------
 #@ History
@@ -247,7 +248,24 @@
 #@ Author : Claudio Kuenzler (www.claudiokuenzler.com)
 #@ Reason : Added option to ignore LCD/Display related elements (--no-lcd)
 #@---------------------------------------------------
+#@ Date   : 20180329
+#@ Author : Claudio Kuenzler (www.claudiokuenzler.com)
+#@ Reason : Try to use internal pywbem function to determine version
+#@---------------------------------------------------
+#@ Date   : 20180411
+#@ Author : Peter Newman
+#@ Reason : Throw an unknown if we can't fetch the data for some reason
+#@---------------------------------------------------
+#@ Date   : 20181001
+#@ Author : Claudio Kuenzler
+#@ Reason : python3 compatibility
+#@---------------------------------------------------
+#@ Date   : 20190510
+#@ Author : Claudio Kuenzler
+#@ Reason : Allow regular expressions from ignore list (-r)
+#@---------------------------------------------------
 
+from __future__ import print_function
 import sys
 import time
 import pywbem
@@ -255,7 +273,7 @@ import re
 import pkg_resources
 from optparse import OptionParser,OptionGroup
 
-version = '20170905'
+version = '20190510'
 
 NS = 'root/cimv2'
 hosturl = ''
@@ -342,6 +360,8 @@ timeout = 0
 
 # elements to ignore (full SEL, broken BIOS, etc)
 ignore_list=[]
+regex_ignore_list=[]
+regex=False
 
 # urlise model and tag numbers (currently only Dell supported, but the code does the right thing for other vendors)
 urlise_country=''
@@ -472,14 +492,14 @@ def urlised_serialnumber(vendor,country,SerialNumber):
 
 def verboseoutput(message) :
   if verbose:
-    print "%s %s" % (time.strftime("%Y%m%d %H:%M:%S"), message)
+    print(time.strftime("%Y%m%d %H:%M:%S"), message)
 
 # ----------------------------------------------------------------------
 
 def getopts() :
-  global hosturl,cimport,user,password,vendor,verbose,perfdata,urlise_country,timeout,ignore_list,get_power,get_volts,get_current,get_temp,get_fan,get_lcd
-  usage = "usage: %prog -H hostname -U username -P password [-C port -V system -v -p -I XX]\n" \
-    "example: %prog -H my-shiny-new-vmware-server -U root -P fakepassword -C 5989 -V auto -I uk\n\n" \
+  global hosturl,cimport,user,password,vendor,verbose,perfdata,urlise_country,timeout,ignore_list,regex,get_power,get_volts,get_current,get_temp,get_fan,get_lcd
+  usage = "usage: %prog -H hostname -U username -P password [-C port -V vendor -v -p -I XX -i list,list -r]\n" \
+    "example: %prog -H hostname -U root -P password -C 5989 -V auto -I uk\n\n" \
     "or, verbosely:\n\n" \
     "usage: %prog --host=hostname --user=username --pass=password [--cimport=port --vendor=system --verbose --perfdata --html=XX]\n"
 
@@ -505,6 +525,8 @@ def getopts() :
       help="timeout in seconds - no effect on Windows (default = no timeout)")
   group2.add_option("-i", "--ignore", action="store", type="string", dest="ignore", default="", \
       help="comma-separated list of elements to ignore")
+  group2.add_option("-r", "--regex", action="store_true", dest="regex", default=False, \
+      help="allow regular expression lookup of ignore list")
   group2.add_option("--no-power", action="store_false", dest="get_power", default=True, \
       help="don't collect power performance data")
   group2.add_option("--no-volts", action="store_false", dest="get_volts", default=True, \
@@ -523,14 +545,14 @@ def getopts() :
 
   # check input arguments
   if len(sys.argv) < 2:
-    print "no parameters specified\n"
+    print("no parameters specified\n")
     parser.print_help()
     sys.exit(-1)
   # if first argument starts with 'https://' we have old-style parameters, so handle in old way
   if re.match("https://",sys.argv[1]):
     # check input arguments
     if len(sys.argv) < 5:
-      print "too few parameters\n"
+      print("too few parameters\n")
       parser.print_help()
       sys.exit(-1)
     if len(sys.argv) > 5 :
@@ -548,7 +570,7 @@ def getopts() :
     mandatories = ['host', 'user', 'password']
     for m in mandatories:
       if not options.__dict__[m]:
-        print "mandatory parameter '--" + m + "' is missing\n"
+        print("mandatory parameter '--" + m + "' is missing\n")
         parser.print_help()
         sys.exit(-1)
 
@@ -569,6 +591,7 @@ def getopts() :
     urlise_country=options.urlise_country.lower()
     timeout=options.timeout
     ignore_list=options.ignore.split(',')
+    regex=options.regex
     get_power=options.get_power
     get_volts=options.get_volts
     get_current=options.get_current
@@ -603,7 +626,7 @@ if os_platform != "win32":
   on_windows = False
   import signal
   def handler(signum, frame):
-    print 'UNKNOWN: Execution time too long!'
+    print('UNKNOWN: Execution time too long!')
     sys.exit(ExitUnknown)
 
 if cimport:
@@ -621,15 +644,21 @@ if not get_lcd:
 # connection to host
 verboseoutput("Connection to "+hosturl)
 # pywbem 0.7.0 handling is special, some patched 0.7.0 installations work differently
-pywbemversion = pkg_resources.get_distribution("pywbem").version
+try:
+  pywbemversion = pywbem.__version__
+except:
+  pywbemversion = pkg_resources.get_distribution("pywbem").version
+else:
+  pywbemversion = pywbem.__version__
 verboseoutput("Found pywbem version "+pywbemversion)
+
 if '0.7.' in pywbemversion:
   try:
     conntest = pywbem.WBEMConnection(hosturl, (user,password))
     c = conntest.EnumerateInstances('CIM_Card')
   except:
     #raise
-    verboseoutput("Connection error, disable SSL certification verification (probably patched pywbem)")
+    verboseoutput("Connection error, disable SSL certificate verification (probably patched pywbem)")
     wbemclient = pywbem.WBEMConnection(hosturl, (user,password), no_verification=True)
   else:
     verboseoutput("Connection worked")
@@ -655,16 +684,19 @@ ExitMsg = ""
 if vendor=='auto':
   try:
     c=wbemclient.EnumerateInstances('CIM_Chassis')
-  except pywbem.cim_operations.CIMError,args:
+  except pywbem.cim_operations.CIMError as args:
     if ( args[1].find('Socket error') >= 0 ):
-      print "UNKNOWN: %s" %args
+      print("UNKNOWN: {}".format(args))
+      sys.exit (ExitUnknown)
+    elif ( args[1].find('ThreadPool --- Failed to enqueue request') >= 0 ):
+      print("UNKNOWN: {}".format(args))
       sys.exit (ExitUnknown)
     else:
       verboseoutput("Unknown CIM Error: %s" % args)
-  except pywbem.cim_http.AuthError,arg:
+  except pywbem.cim_http.AuthError as arg:
     verboseoutput("Global exit set to UNKNOWN")
     GlobalStatus = ExitUnknown
-    print "UNKNOWN: Authentication Error"
+    print("UNKNOWN: Authentication Error")
     sys.exit (GlobalStatus)
   else:
     man=c[0][u'Manufacturer']
@@ -683,16 +715,19 @@ for classe in ClassesToCheck :
   verboseoutput("Check classe "+classe)
   try:
     instance_list = wbemclient.EnumerateInstances(classe)
-  except pywbem.cim_operations.CIMError,args:
+  except pywbem.cim_operations.CIMError as args:
     if ( args[1].find('Socket error') >= 0 ):
-      print "UNKNOWN: %s" %args
+      print("UNKNOWN: {}".format(args))
+      sys.exit (ExitUnknown)
+    elif ( args[1].find('ThreadPool --- Failed to enqueue request') >= 0 ):
+      print("UNKNOWN: {}".format(args))
       sys.exit (ExitUnknown)
     else:
       verboseoutput("Unknown CIM Error: %s" % args)
-  except pywbem.cim_http.AuthError,arg:
+  except pywbem.cim_http.AuthError as arg:
     verboseoutput("Global exit set to UNKNOWN")
     GlobalStatus = ExitUnknown
-    print "UNKNOWN: Authentication Error"
+    print("UNKNOWN: Authentication Error")
     sys.exit (GlobalStatus)
   else:
     # GlobalStatus = ExitOK #ARR
@@ -704,9 +739,15 @@ for classe in ClassesToCheck :
       verboseoutput("  Element Name = "+elementName)
 
       # Ignore element if we don't want it
-      if elementName in ignore_list :
+      if (regex == True) and (len(ignore_list) > 0) :
+        for ignore in ignore_list :
+          if re.search(ignore, elementName, re.IGNORECASE) :
+            verboseoutput("    (ignored through regex)")
+            regex_ignore_list.append(elementName)
+
+      if (elementName in ignore_list) or (elementName in regex_ignore_list) :
         verboseoutput("    (ignored)")
-        continue      
+        continue
 
       # BIOS & Server info
       if elementName == 'System BIOS' :
@@ -916,12 +957,12 @@ if perf == '|':
   perf = ''
 
 if GlobalStatus == ExitOK :
-  print "OK - Server: %s %s %s%s" % (server_info, SerialNumber, bios_info, perf)
+  print("OK - Server: %s %s %s%s" % (server_info, SerialNumber, bios_info, perf))
 
 elif GlobalStatus == ExitUnknown :
-  print "UNKNOWN: %s" % (ExitMsg) #ARR
+  print("UNKNOWN: %s" % (ExitMsg)) #ARR
 
 else:
-  print "%s- Server: %s %s %s%s" % (ExitMsg, server_info, SerialNumber, bios_info, perf)
+  print("%s - Server:  %s %s %s%s" % (ExitMsg, server_info, SerialNumber, bios_info, perf))
 
 sys.exit (GlobalStatus)
